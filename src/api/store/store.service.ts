@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -21,8 +22,10 @@ import { VerifyOtpDto } from 'src/common/dto/verify-dto';
 import { ForgetPassDto } from 'src/common/dto/forget-password.dto';
 import { ConfirmForgotPasswordDto } from 'src/common/dto/confirm-pass.dto';
 import { MailService } from '../mail/mail.service';
-import { SignInDto } from 'src/common/dto/signIn.dto';
 import { StoreSignInDto } from 'src/common/dto/store-signin';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { config } from 'src/config';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class StoreService extends BaseService<
@@ -35,15 +38,16 @@ export class StoreService extends BaseService<
     private readonly crypto: CryptoService,
     private readonly token: TokenService,
     private readonly mailerService: MailService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     super(storeRepo);
   }
   async createStore(createStoreDto: CreateStoreDto) {
     const existsUsername = await this.storeRepo.findOne({
-      where: { login: createStoreDto.login },
+      where: { email: createStoreDto.email },
     });
 
-    if (existsUsername) throw new ConflictException('Login already exists');
+    if (existsUsername) throw new ConflictException('email already exists');
 
     const existsPhone = await this.storeRepo.findOne({
       where: { phoneNumber: createStoreDto.phoneNumber },
@@ -59,7 +63,6 @@ export class StoreService extends BaseService<
 
     const hashPassword = await this.crypto.encrypt(createStoreDto.password);
     const store = this.storeRepo.create({
-      login: createStoreDto.login,
       password: hashPassword,
       fullName: createStoreDto.fullName,
       wallet: createStoreDto.wallet,
@@ -75,11 +78,11 @@ export class StoreService extends BaseService<
   async updateStore(id: string, updateStoreDto: UpdateStoreDto) {
     const store = await this.storeRepo.findOne({ where: { id } });
     if (!store) throw new NotFoundException('Store not found');
-    const existsLogin = await this.storeRepo.findOne({
-      where: { login: updateStoreDto.login },
+    const existsemail = await this.storeRepo.findOne({
+      where: { email: updateStoreDto.email },
     });
-    if (existsLogin && existsLogin.id !== id)
-      throw new ConflictException('login already exists');
+    if (existsemail && existsemail.id !== id)
+      throw new ConflictException('email already exists');
 
     if (updateStoreDto.email) {
       const existsEmail = await this.storeRepo.findOne({
@@ -99,7 +102,7 @@ export class StoreService extends BaseService<
 
   async signIn(signInDto: StoreSignInDto, res: Response) {
     const store = await this.storeRepo.findOne({
-      where: { login: signInDto.login },
+      where: { email: signInDto.email },
     });
     const isMatchPassword = await this.crypto.decrypt(
       signInDto.password,
@@ -107,7 +110,7 @@ export class StoreService extends BaseService<
     );
 
     if (!isMatchPassword || !store)
-      throw new BadRequestException('Login or password incorrect');
+      throw new BadRequestException('email or password incorrect');
 
     const payload: IToken = {
       id: store.id,
@@ -121,55 +124,63 @@ export class StoreService extends BaseService<
     return getSuccessRes({ accessToken });
   }
 
-  async forgotPassword(dto: ForgetPassDto) {
-    const store = await this.storeRepo.findOne({ where: { email: dto.email } });
-    if (!store) throw new NotFoundException('store with this email not found');
+  async forGetPassword(dto: ForgetPassDto) {
+    const { email } = dto;
+
+    const store = await this.storeRepo.findOne({ where: { email } });
+
+    if (!store) throw new NotFoundException('Store with this email not found');
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    store.otpCode = otp;
-    store.otpExpiresAt = new Date(Date.now() + 1000 * 60 * 5); // 5 minutes
-    await this.storeRepo.save(store);
+
+    await this.cacheManager.set(email, otp);
 
     await this.mailerService.sendMail(
-      store.email,
+      email,
       'Password Reset OTP',
       `Your OTP code is: ${otp}`,
     );
 
-    return { message: 'OTP sent to email successfully' };
+    return getSuccessRes(
+      {
+        verifyOtpUrl: `${config.BASE_URL}/store/verify-otp`,
+        requestMethod: 'POST',
+        otp,
+      },
+      200,
+      `${email} OTP sent to email successfully`,
+    );
   }
 
   async verifyOtp(dto: VerifyOtpDto) {
-    const store = await this.storeRepo.findOne({ where: { email: dto.email } });
-    if (!store) throw new NotFoundException('store with this email not found');
+    const { email, otp } = dto;
 
-    if (!store.otpCode || !store.otpExpiresAt)
-      throw new BadRequestException('OTP not found, please request a new one');
+    const value: any = await this.cacheManager.get(email);
+    if (!value) throw new BadRequestException('Email incorrect or OTP expired');
 
-    if (store.otpExpiresAt < new Date())
-      throw new UnauthorizedException('OTP expired');
+    if (value !== otp) {
+      throw new BadRequestException('OTP incorrect or expired');
+    }
 
-    if (store.otpCode !== dto.otp)
-      throw new UnauthorizedException('OTP incorrect');
+    await this.cacheManager.del(email);
 
-    return { message: 'OTP verified successfully' };
+    return getSuccessRes({
+      confirmPasswordUrl: `${config.BASE_URL}/store/reset-password`,
+      requestMethod: 'PATCH',
+      email,
+    });
   }
 
-  async confirmForgotPassword(dto: ConfirmForgotPasswordDto) {
-    const store = await this.storeRepo.findOne({ where: { email: dto.email } });
-    if (!store) throw new NotFoundException('store with this email not found');
+  async confirmForGetPassword(dto: ConfirmForgotPasswordDto) {
+    const { email, newPassword } = dto;
+    const store = await this.storeRepo.findOne({ where: { email } });
 
-    if (
-      !store.otpCode ||
-      !store.otpExpiresAt ||
-      store.otpExpiresAt < new Date()
-    )
-      throw new UnauthorizedException('OTP expired or incorrect');
+    if (!store) throw new NotFoundException('Store with this email not found');
 
-    const hashedPassword = await this.crypto.encrypt(dto.newPassword);
+    const hashedPassword = await this.crypto.encrypt(newPassword);
+
     store.password = hashedPassword;
-    store.otpCode = null;
-    store.otpExpiresAt = null;
+
     await this.storeRepo.save(store);
 
     return { message: 'Password reset successfully' };

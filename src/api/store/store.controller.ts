@@ -166,7 +166,7 @@ export class StoreController {
     return this.storeService.findAllWithPagination({
       where,
       order: { createdAt: 'DESC' },
-      select: { id: true, login: true, isActive: true },
+      select: { id: true, email: true, isActive: true },
       skip: page,
       take: limit,
     });
@@ -242,7 +242,7 @@ export class StoreController {
   @ApiOperation({ summary: 'forget-password' })
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgetPassDto) {
-    return this.storeService.forgotPassword(dto);
+    return this.storeService.forGetPassword(dto);
   }
 
   @Post('verify-otp')
@@ -252,6 +252,6 @@ export class StoreController {
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ConfirmForgotPasswordDto) {
-    return this.storeService.confirmForgotPassword(dto);
+    return this.storeService.confirmForGetPassword(dto);
   }
 }

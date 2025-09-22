@@ -6,9 +6,6 @@ import { AccessRoles } from 'src/common/enum/roles.enum';
 
 @Entity('store')
 export class Store extends BaseEntity {
-  @Column({ type: 'varchar', unique: true, nullable: true })
-  login: string;
-
   @Column({ type: 'varchar', nullable: true })
   password: string;
 

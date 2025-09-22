@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PeriodDebt } from 'src/core/entity/periodDebt.entity';
-import { PeriodDebtService } from './period-debt.service';
-import { PeriodDebtController } from './period-debt.controller';
 import { DebtModule } from '../debt/debt.module';
+import { PeriodDebtController } from './period.controller';
+import { PeriodDebtService } from './period.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([PeriodDebt]), DebtModule],

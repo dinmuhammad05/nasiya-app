@@ -22,9 +22,6 @@ export class Debt extends BaseEntity {
   @Column()
   description: string;
 
-  @Column('decimal', { default: 0 })
-  balance: number;
-
   @ManyToOne(() => Debtor, (debtor) => debtor.debts)
   debtor: Debtor;
 

@@ -8,7 +8,7 @@ export class StoreSignInDto {
   })
   @IsString()
   @IsNotEmpty()
-  login: string;
+  email: string;
 
   @ApiProperty({
     example: 'john1234',

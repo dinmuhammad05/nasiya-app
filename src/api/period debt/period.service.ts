@@ -3,11 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { PeriodDebt } from 'src/core/entity/periodDebt.entity';
 import type { PeriodDebtRepository } from 'src/core/repository/period-debt.repository';
 import { BaseService } from 'src/infrastructure/base/base.service';
-import { CreatePeriodDebtDto } from './dto/create-period-debt.dto';
-import { UpdatePeriodDebtDto } from './dto/update-period-debt.dto';
 import { getSuccessRes } from 'src/common/util/get-success-res';
 import { DebtService } from '../debt/debt.service';
 import { IResponse } from 'src/common/interface/response.interface';
+import { CreatePeriodDebtDto } from './dto/create-period.dto';
+import { UpdatePeriodDebtDto } from './dto/update-period.dto';
 
 @Injectable()
 export class PeriodDebtService extends BaseService<

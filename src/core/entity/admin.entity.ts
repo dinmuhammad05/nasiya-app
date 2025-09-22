@@ -21,6 +21,4 @@ export class Admin extends BaseEntity {
 
   @Column({ type: 'varchar', nullable: true, unique: true })
   email: string;
-
-  
 }

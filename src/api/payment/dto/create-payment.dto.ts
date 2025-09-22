@@ -3,9 +3,9 @@ import { IsNotEmpty, IsNumber, IsDateString, IsUUID } from 'class-validator';
 
 export class CreatePaymentDto {
   @ApiProperty({ example: 150.0, description: 'Paid sum' })
-  @IsUUID()
+  @IsNumber()
   @IsNotEmpty()
-  sum: string;
+  sum: number;
 
   @ApiProperty({ example: '2025-09-12', description: 'Payment date' })
   @IsDateString()

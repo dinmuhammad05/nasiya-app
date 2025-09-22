@@ -6,11 +6,11 @@ import { BaseService } from 'src/infrastructure/base/base.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { UpdatePaymentDto } from './dto/update-payment.dto';
 import { getSuccessRes } from 'src/common/util/get-success-res';
-import { PeriodDebtService } from '../period-debt/period-debt.service';
 import { Debt } from 'src/core/entity/debt.entity';
 import { PeriodDebt } from 'src/core/entity/periodDebt.entity';
 import { DataSource } from 'typeorm';
 import { IResponse } from 'src/common/interface/response.interface';
+import { PeriodDebtService } from '../period debt/period.service';
 
 @Injectable()
 export class PaymentService extends BaseService<
@@ -26,9 +26,8 @@ export class PaymentService extends BaseService<
     super(paymentRepo);
   }
 
-  async create(dto: CreatePaymentDto): Promise<IResponse> {
+  async createPay(dto: CreatePaymentDto): Promise<IResponse> {
     const period = await this.periodService.findOneById(dto.periodDebtId);
-
     if (!period) throw new NotFoundException('Period not found');
 
     const result = await this.dataSource.transaction(async (manager) => {
@@ -36,15 +35,20 @@ export class PaymentService extends BaseService<
       const periodRepo = manager.getRepository(PeriodDebt);
       const debtRepo = manager.getRepository(Debt);
 
-      const payment = paymentRepo.create(dto as any);
+      const payment = paymentRepo.create({
+        sum: Number(dto.sum),
+        date: dto.date ?? new Date(),
+        periodDebt: { id: dto.periodDebtId } as PeriodDebt,
+      });
       await paymentRepo.save(payment);
 
       const periodEntity = await periodRepo.findOne({
         where: { id: dto.periodDebtId },
         relations: ['debt'],
       });
-      if (!periodEntity)
+      if (!periodEntity) {
         throw new NotFoundException('Period debt not found inside transaction');
+      }
 
       const debtEntity = await debtRepo.findOne({
         where: { id: periodEntity.debt.id },
@@ -52,28 +56,17 @@ export class PaymentService extends BaseService<
       });
       if (!debtEntity) throw new NotFoundException('Debt not found');
 
-      let balance = Number(debtEntity.balance || 0);
       let sum = Number(dto.sum);
-
-      sum += balance;
-      debtEntity.balance = 0;
-
       const currentRemnant = Number(periodEntity.remnant ?? 0);
 
       if (sum >= currentRemnant) {
         periodEntity.remnant = 0;
         periodEntity.isPaid = true;
-
-        const extra = sum - currentRemnant;
-        if (extra > 0) {
-          debtEntity.balance += extra;
-        }
       } else {
         periodEntity.remnant = currentRemnant - sum;
       }
 
       await periodRepo.save(periodEntity);
-      await debtRepo.save(debtEntity);
 
       const totalPeriods = debtEntity.periods.length;
       const paidPeriods = debtEntity.periods.filter((p) => p.isPaid).length;
@@ -85,7 +78,6 @@ export class PaymentService extends BaseService<
         debtEntity: {
           id: debtEntity.id,
           product: debtEntity.product,
-          balance: debtEntity.balance,
           totalPeriods,
           paidPeriods,
           remainingPeriods,

@@ -4,7 +4,7 @@ import { Debt } from './debt.entity';
 
 @Entity('imagesDebt')
 export class ImagesDebt extends BaseEntity {
-  @Column({})
+  @Column("varchar")
   imageUrl: string;
 
   @ManyToOne(() => Debt, (debt) => debt.images)

@@ -9,12 +9,18 @@ import {
   HttpStatus,
   UseGuards,
   Query,
+  UploadedFile,
+  ValidationPipe,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
 import { DebtorService } from './debtor.service';
 import { CreateDebtorDto } from './dto/create-debtor.dto';
 import { UpdateDebtorDto } from './dto/update-debtor.dto';
 import {
   ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -25,35 +31,81 @@ import { AccessRoles } from 'src/common/enum/roles.enum';
 import { QueryPaginationDto } from 'src/common/dto/query-pagination.dto';
 import { ILike } from 'typeorm';
 import { Roles } from 'src/common/decorator/roles.decorato';
+import { ImageValidationPipe } from 'src/infrastructure/pipe/file.validation.pipe';
+import {
+  FileFieldsInterceptor,
+  FileInterceptor,
+} from '@nestjs/platform-express';
 
 @ApiTags('Debtor')
 @Controller('debtor')
 export class DebtorController {
   constructor(private readonly debtorService: DebtorService) {}
-
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AccessRoles.ADMIN, AccessRoles.SUPER_ADMIN, AccessRoles.STORE)
   @Post()
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new debtor' })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
     schema: {
-      example: {
-        id: 1,
-        fullname: 'John Doe',
-        phone: '+998901234567',
-        address: 'Tashkent',
-        createdAt: '2025-09-11T12:00:00.000Z',
+      type: 'object',
+      properties: {
+        fullName: { type: 'string', example: 'Eshmat Toshmatov' },
+        address: { type: 'string', example: 'Chilonzor' },
+        product: { type: 'string', example: 'iPhone 17 jiggarangidan' },
+        date: { type: 'string', format: 'date', example: '2025-09-10' },
+        period: { type: 'number', enum: [1, 3, 6, 12], example: 12 },
+        sum: { type: 'number', example: 1500.5 },
+        description: { type: 'string', example: 'Some description' },
+        monthlySum: { type: 'number', example: 150.0 },
+        remnant: { type: 'number', example: 1200.0 },
+        phoneNumber: { type: 'string', example: '+998901112233' },
+        imageDebt: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image of debt (upload)',
+        },
+        imageDebtor: {
+          type: 'string',
+          format: 'binary',
+          description: 'Image of debtor (upload)',
+        },
       },
+      required: [
+        'storeId',
+        'fullName',
+        'address',
+        'product',
+        'date',
+        'period',
+        'sum',
+        'monthlySum',
+        'phoneNumber',
+        'imageDebt',
+        'imageDebtor',
+      ],
     },
   })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    schema: { example: { message: 'Validation failed', error: 'Bad Request' } },
-  })
-  create(@Body() createDebtorDto: CreateDebtorDto) {
-    return this.debtorService.createDebtor(createDebtorDto);
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'imageDebt', maxCount: 1 },
+      { name: 'imageDebtor', maxCount: 1 },
+    ]),
+  )
+  create(
+    @Body() createDebtorDto: CreateDebtorDto,
+    @UploadedFiles()
+    files: {
+      imageDebt?: Express.Multer.File[];
+      imageDebtor?: Express.Multer.File[];
+    },
+  ) {
+    return this.debtorService.createDebtor(
+      createDebtorDto,
+      files.imageDebt![0],
+      files.imageDebtor![0],
+    );
   }
 
   @UseGuards(AuthGuard, RolesGuard)

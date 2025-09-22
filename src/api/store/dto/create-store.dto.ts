@@ -13,12 +13,6 @@ import {
 import { AccessRoles } from 'src/common/enum/roles.enum';
 
 export class CreateStoreDto {
-  @ApiProperty({ example: 'login', description: 'login store' })
-  @IsString()
-  @Length(1, 255)
-  @IsNotEmpty()
-  login: string;
-
   @ApiProperty({ example: 'login123!', description: 'password for store' })
   @IsString()
   @Length(6, 255)

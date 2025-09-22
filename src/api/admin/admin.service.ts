@@ -5,7 +5,6 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
-
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateAdminDto } from './dto/create-admin.dto';
@@ -134,7 +133,7 @@ export class AdminService extends BaseService<
     const { username, password } = signInDto;
 
     const admin = await this.adminRepo.findOne({ where: { username } });
-    
+
     if (!admin) throw new BadRequestException('Username or password incorrect');
 
     const isMatchPassword = await this.crypto.decrypt(password, admin.password);
@@ -157,7 +156,7 @@ export class AdminService extends BaseService<
 
   async forGetPassword(dto: ForgetPassDto) {
     const { email } = dto;
-    
+
     const admin = await this.adminRepo.findOne({ where: { email: email } });
 
     if (!admin) throw new NotFoundException('Admin with this email not found');

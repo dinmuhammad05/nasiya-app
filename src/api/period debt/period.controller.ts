@@ -8,14 +8,14 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { PeriodDebtService } from './period-debt.service';
-import { CreatePeriodDebtDto } from './dto/create-period-debt.dto';
-import { UpdatePeriodDebtDto } from './dto/update-period-debt.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from 'src/common/guard/roles.guard';
 import { AccessRoles } from '../../common/enum/roles.enum';
 import { AuthGuard } from 'src/common/guard/auth.guard';
 import { Roles } from 'src/common/decorator/roles.decorato';
+import { PeriodDebtService } from './period.service';
+import { CreatePeriodDebtDto } from './dto/create-period.dto';
+import { UpdatePeriodDebtDto } from './dto/update-period.dto';
 
 @ApiTags('PeriodDebts')
 @Controller('periodDebts')

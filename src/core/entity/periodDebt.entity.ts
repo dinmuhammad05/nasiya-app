@@ -27,6 +27,6 @@ export class PeriodDebt extends BaseEntity {
   @ManyToOne(() => Debt, (debt) => debt.period)
   debt: Debt;
 
-  @OneToOne(() => Payment, (payment) => payment.period)
+  @OneToOne(() => Payment, (payment) => payment.periodDebt)
   payment: Payment;
 }
