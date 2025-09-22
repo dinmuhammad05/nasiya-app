@@ -8,7 +8,7 @@ import { AllExceptionFilter } from 'src/infrastructure/exiption/all.exeption';
 export class Application {
   static async start() {
     const PORT = Number(config.API_PORT);
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, {cors: true});
 
     app.useGlobalFilters(new AllExceptionFilter());
 
