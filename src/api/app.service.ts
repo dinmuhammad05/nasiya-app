@@ -4,17 +4,21 @@ import { HttpStatus, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { config } from 'src/config';
 import { AllExceptionFilter } from 'src/infrastructure/exiption/all.exeption';
-
+import cookieparser from 'cookie-parser'
 export class Application {
   static async start() {
     const PORT = Number(config.API_PORT);
-    const app = await NestFactory.create(AppModule, {cors: true});
+    const app = await NestFactory.create(AppModule);
+    app.enableCors({
+      origin: true,
+      credentials: true,
+    });
 
     app.useGlobalFilters(new AllExceptionFilter());
 
     const prefix = 'api/v1';
     app.setGlobalPrefix(prefix);
-
+    app.use(cookieparser())
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,

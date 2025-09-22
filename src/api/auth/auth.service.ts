@@ -54,7 +54,7 @@ export class AuthService {
     if (!user) {
       throw new ForbiddenException('Forbidden user');
     }
-    res.clearCookie(tokenKey);
+    res.clearCookie(tokenKey, { httpOnly: true, secure: false });
     return getSuccessRes({});
   }
 }

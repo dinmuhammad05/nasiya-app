@@ -1,23 +1,17 @@
 import {
-  ExecutionContext,
-  InternalServerErrorException,
-  UnauthorizedException,
   createParamDecorator,
+  ExecutionContext,
+  UnauthorizedException,
 } from '@nestjs/common';
 
 export const CookieGetter = createParamDecorator(
-  async (data: string, context: ExecutionContext): Promise<string> => {
-    try {
-      const request = context.switchToHttp().getRequest();
-      const refreshToken = request.cookies[data];
-      if (!refreshToken) {
-        throw new UnauthorizedException('Refresh token not found');
-      }
-      return refreshToken;
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Error on reading cookie: ${error}`,
-      );
+  (data: string, context: ExecutionContext): string => {
+    const request = context.switchToHttp().getRequest();
+    const token = request.cookies?.[data];
+
+    if (!token) {
+      throw new UnauthorizedException(`${data} cookie not found`);
     }
+    return token;
   },
 );
