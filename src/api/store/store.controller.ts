@@ -32,11 +32,17 @@ import { VerifyOtpDto } from 'src/common/dto/verify-dto';
 import { ForgetPassDto } from 'src/common/dto/forget-password.dto';
 import { SignInDto } from 'src/common/dto/signIn.dto';
 import { StoreSignInDto } from 'src/common/dto/store-signin';
+import { AuthService } from '../auth/auth.service';
+import { Store } from 'src/core/entity/store.entity';
+import { CookieGetter } from 'src/common/decorator/get-cooki.decorator';
 
 @ApiTags('Store')
 @Controller('store')
 export class StoreController {
-  constructor(private readonly storeService: StoreService) {}
+  constructor(
+    private readonly storeService: StoreService,
+    private readonly authService: AuthService,
+  ) {}
 
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AccessRoles.SUPER_ADMIN, AccessRoles.ADMIN)
@@ -85,6 +91,22 @@ export class StoreController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.storeService.signIn(signInDto, res);
+  }
+
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AccessRoles.SUPER_ADMIN, AccessRoles.ADMIN, AccessRoles.STORE)
+  @ApiBearerAuth()
+  @Post('signout')
+  signOut(
+    @CookieGetter('storeToken') token: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.signOut(
+      this.storeService.getRepository,
+      token,
+      res,
+      'storeToken',
+    );
   }
 
   @UseGuards(AuthGuard, RolesGuard)
